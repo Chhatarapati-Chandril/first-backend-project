@@ -5,7 +5,14 @@ import {uploadOnCloudinary} from "../utils/cloudinary.js"
 import { ApiResponse } from "../utils/ApiResponse.js"
 
 
+
 const registerUser = asyncHandler( async (req, res) => {
+
+    // console.log("MULTER DEBUG:");
+    // console.log("Content-Type:", req.headers["content-type"]);
+    // console.log("req.files:", req.files);
+    // console.log("req.body:", req.body);
+
         // get user details
         // validation - not empty
         // check if user already exists: username, email
@@ -27,7 +34,7 @@ const registerUser = asyncHandler( async (req, res) => {
             
         }
 
-        const existedUser = User.findOne(
+        const existedUser = await User.findOne(
             {
                 $or: [{username}, {email}]
             }
@@ -35,19 +42,21 @@ const registerUser = asyncHandler( async (req, res) => {
         if (existedUser) {
             throw new ApiError(409, "User with email or username already exists")
         }
+        console.log(req.files);
+        
 
-        const avatatLocalPath = req.files?.avatar[0]?.path
-        const coverImageLocalPath = req?.coverImage[0]?.path
+        const avatarLocalPath = req?.files?.avatar?.[0]?.path
+        const coverImageLocalPath = req?.files?.coverImage?.[0]?.path
 
-        if (!avatatLocalPath) {
+        if (!avatarLocalPath) {
             throw new ApiError(400, "Avatar file is required")
         }
 
-        const avatar = await uploadOnCloudinary(avatatLocalPath)
+        const avatar = await uploadOnCloudinary(avatarLocalPath)
         const coverImage = await uploadOnCloudinary(coverImageLocalPath)
 
-        if (!avatatLocalPath) {
-            throw new ApiError(400, "Avatar file is required")
+        if (!avatar || !avatar.url) {
+            throw new ApiError(500, "Avatar upload failed");
         }
 
         const user = await User.create(
@@ -67,8 +76,12 @@ const registerUser = asyncHandler( async (req, res) => {
         }
 
         return res.status(201).json(
-            new ApiResponse(200, createdUser, "User registered successfully")
+            new ApiResponse(201, createdUser, "User registered successfully")
         )
+
+
+
+
     }
 )
 
